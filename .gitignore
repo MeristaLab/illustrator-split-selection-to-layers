@@ -1,0 +1,7 @@
+# VSCode settings
+.vscode/
+*.code-workspace
+workspace/
+workspace_*/ 
+*.py
+Tree_archives/
