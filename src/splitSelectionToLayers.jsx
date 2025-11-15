@@ -12,133 +12,136 @@
 // are ignored and the layer name remains unchanged.
 // ------------------------------------------------------------
 
-var doc = app.activeDocument;
+(function () {
+    var doc = app.activeDocument;
 
-// Debug flag
-var DEBUG_LOG = false;
+    // Debug flag
+    var DEBUG_LOG = false;
 
-function dbgLog(msg){
-    if (DEBUG_LOG) $.writeln(String(msg));
-}
+    function dbgLog(msg){
+        if (DEBUG_LOG) $.writeln(String(msg));
+    }
 
-// ============================================================
-// ① getSelectionStatus(doc)
-// ============================================================
-function getSelectionStatus(targetDoc) {
-    var result = {};
-    var sel = targetDoc.selection;
+    // ============================================================
+    // ① getSelectionStatus(doc)
+    // ============================================================
+    function getSelectionStatus(targetDoc) {
+        var result = {};
+        var sel = targetDoc.selection;
 
-    if (sel.length === 0) {
-        result.count = 0;
+        if (sel.length === 0) {
+            result.count = 0;
+            return result;
+        }
+
+        result.count = sel.length;
+        result.first = sel[0];
+
         return result;
     }
 
-    result.count = sel.length;
-    result.first = sel[0];
 
-    return result;
-}
-
-
-// ============================================================
-// ② createNewLayerNear(baseLayer)
-// ============================================================
-function createNewLayerNear(baseLayer) {
-    var newLayer = doc.layers.add();
-    newLayer.move(baseLayer, ElementPlacement.PLACEAFTER);
-    return newLayer;
-}
-
-
-// ============================================================
-// ③ moveSingleItemToLayer(targetItem, targetLayer)
-// ============================================================
-function moveSingleItemToLayer(targetItem, targetLayer) {
-    targetItem.move(targetLayer, ElementPlacement.PLACEATBEGINNING);
-}
-
-
-// ============================================================
-// ④ decideLayerLabel(newLayer, item)
-//     Assign a layer name ONLY if the item actually has a
-//     user-defined name visible in Illustrator's UI.
-//     - For PathItem: name is empty → check note
-//     - If both name and note are empty → do not rename
-// ============================================================
-function decideLayerLabel(newLayer, item) {
-    var raw = "";
-
-    // Illustrator UI-visible name:
-    //   - Groups, Text, Symbols → item.name contains user label
-    //   - PathItem normally has "" → fallback to .note
-    if (item.name !== undefined && item.name !== "") {
-        raw = item.name;
-    } else {
-        raw = item.note;
+    // ============================================================
+    // ② createNewLayerNear(baseLayer)
+    // ============================================================
+    function createNewLayerNear(baseLayer) {
+        var newLayer = doc.layers.add();
+        newLayer.move(baseLayer, ElementPlacement.PLACEAFTER);
+        return newLayer;
     }
 
-    // Clean up
-    var cleaned = raw.replace(/^\s+/, "").replace(/\s+$/, "");
 
-    // If empty → treat as "default object label" → do NOT rename layer
-    if (cleaned === "") {
-        dbgLog("Layer name not changed (default Illustrator label).");
-        return;
+    // ============================================================
+    // ③ moveSingleItemToLayer(targetItem, targetLayer)
+    // ============================================================
+    function moveSingleItemToLayer(targetItem, targetLayer) {
+        targetItem.move(targetLayer, ElementPlacement.PLACEATBEGINNING);
     }
 
-    newLayer.name = cleaned;
-    dbgLog("Layer renamed to: " + cleaned);
-}
 
+    // ============================================================
+    // ④ decideLayerLabel(newLayer, item)
+    //     Assign a layer name ONLY if the item actually has a
+    //     user-defined name visible in Illustrator's UI.
+    //     - For PathItem: name is empty → check note
+    //     - If both name and note are empty → do not rename
+    // ============================================================
+    function decideLayerLabel(newLayer, item) {
+        var raw = "";
 
-// ============================================================
-// ⑤ runScript()
-// ============================================================
-function runScript() {
-    var status = getSelectionStatus(doc);
-    if (status.count === 0) {
-        alert("No objects selected.");
-        dbgLog("No objects selected.");
-        return;
+        // Illustrator UI-visible name:
+        //   - Groups, Text, Symbols → item.name contains user label
+        //   - PathItem normally has "" → fallback to .note
+        if (item.name !== undefined && item.name !== "") {
+            raw = item.name;
+        } else {
+            raw = item.note;
+        }
+
+        // Clean up
+        var cleaned = raw.replace(/^\s+/, "").replace(/\s+$/, "");
+
+        // If empty → treat as "default object label" → do NOT rename layer
+        if (cleaned === "") {
+            dbgLog("Layer name not changed (default Illustrator label).");
+            return;
+        }
+
+        newLayer.name = cleaned;
+        dbgLog("Layer renamed to: " + cleaned);
     }
 
-    var sel = doc.selection;
 
-    // --------------------------------------------------------
-    // Single selection
-    // --------------------------------------------------------
-    if (status.count === 1) {
-        var baseLayer = status.first.layer;
-        var newLayer = createNewLayerNear(baseLayer);
+    // ============================================================
+    // ⑤ runScript()
+    // ============================================================
+    function runScript() {
+        var status = getSelectionStatus(doc);
+        if (status.count === 0) {
+            alert("No objects selected.");
+            dbgLog("No objects selected.");
+            return;
+        }
 
-        sel[0].move(newLayer, ElementPlacement.PLACEATBEGINNING);
+        var sel = doc.selection;
 
-        decideLayerLabel(newLayer, sel[0]); // Always try rename
+        // --------------------------------------------------------
+        // Single selection
+        // --------------------------------------------------------
+        if (status.count === 1) {
+            var baseLayer = status.first.layer;
+            var newLayer = createNewLayerNear(baseLayer);
 
-        dbgLog("Moved the object to a new layer.");
-        return;
+            sel[0].move(newLayer, ElementPlacement.PLACEATBEGINNING);
+
+            decideLayerLabel(newLayer, sel[0]); // Always try rename
+
+            dbgLog("Moved the object to a new layer.");
+            return;
+        }
+
+        // --------------------------------------------------------
+        // Multiple selection (process in reverse order)
+        // --------------------------------------------------------
+        for (var i = sel.length - 1; i >= 0; i--) {
+
+            var item = sel[i];
+            var base = item.layer;
+
+            var newL = createNewLayerNear(base);
+
+            moveSingleItemToLayer(item, newL);
+
+            decideLayerLabel(newL, item);
+        }
+
+        dbgLog("Separated selected objects into individual layers.");
     }
 
-    // --------------------------------------------------------
-    // Multiple selection (process in reverse order)
-    // --------------------------------------------------------
-    for (var i = sel.length - 1; i >= 0; i--) {
 
-        var item = sel[i];
-        var base = item.layer;
+    // ------------------------------------------------------------
+    // Execute
+    // ------------------------------------------------------------
+    runScript();
 
-        var newL = createNewLayerNear(base);
-
-        moveSingleItemToLayer(item, newL);
-
-        decideLayerLabel(newL, item);
-    }
-
-    dbgLog("Separated selected objects into individual layers.");
-}
-
-
-// ------------------------------------------------------------
-// Execute
-// ------------------------------------------------------------
-runScript();
+})();
