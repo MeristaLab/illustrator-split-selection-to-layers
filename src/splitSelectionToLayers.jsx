@@ -12,8 +12,6 @@
 // are ignored and the layer name remains unchanged.
 // ------------------------------------------------------------
 
-
-
 var doc = app.activeDocument;
 
 // Debug flag

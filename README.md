@@ -3,6 +3,8 @@
 **splitSelectionToLayers.jsx**
 by Merista Lab
 
+This repository contains the source code for the Illustrator script “Selection to Layer”.
+
 ---
 
 ## **Overview**
