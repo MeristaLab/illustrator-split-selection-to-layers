@@ -97,6 +97,7 @@ function decideLayerLabel(newLayer, item) {
 function runScript() {
     var status = getSelectionStatus(doc);
     if (status.count === 0) {
+        alert("No objects selected.");
         dbgLog("No objects selected.");
         return;
     }
